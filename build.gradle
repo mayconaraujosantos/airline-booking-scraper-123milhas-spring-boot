@@ -2,6 +2,7 @@ plugins {
 	id 'java'
 	id 'org.springframework.boot' version '3.0.1'
 	id 'io.spring.dependency-management' version '1.1.0'
+	id "org.sonarqube" version "3.5.0.2730"
 }
 
 group = 'com.airlines.booking'
@@ -34,4 +35,12 @@ dependencies {
 
 tasks.named('test') {
 	useJUnitPlatform()
+}
+
+sonarqube {
+  properties {
+    property "sonar.projectKey", "mayconaraujosantos_airline-booking-scraper-123milhas-spring-boot"
+    property "sonar.organization", "mayconaraujosantos"
+    property "sonar.host.url", "https://sonarcloud.io"
+  }
 }
