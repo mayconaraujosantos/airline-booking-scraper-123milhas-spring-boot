@@ -3,7 +3,11 @@ plugins {
 	id 'org.springframework.boot' version '3.0.1'
 	id 'io.spring.dependency-management' version '1.1.0'
 	id "org.sonarqube" version "3.5.0.2730"
+    id "com.diffplug.spotless" version "6.12.1"
+    id "checkstyle"
+    id 'jacoco'
 }
+
 
 group = 'com.airlines.booking'
 version = '0.0.1-SNAPSHOT'
@@ -24,6 +28,8 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-data-mongodb'
 	implementation 'org.springframework.boot:spring-boot-starter-validation'
 	implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'com.diffplug.spotless:spotless-lib:2.31.1'
+    implementation 'com.diffplug.spotless:spotless-plugin-gradle:6.12.1'
 	compileOnly 'org.projectlombok:lombok'
 	developmentOnly 'org.springframework.boot:spring-boot-devtools'
 	runtimeOnly 'com.h2database:h2'
@@ -42,5 +48,106 @@ sonarqube {
     property "sonar.projectKey", "mayconaraujosantos_airline-booking-scraper-123milhas-spring-boot"
     property "sonar.organization", "mayconaraujosantos"
     property "sonar.host.url", "https://sonarcloud.io"
+    property 'sonar.coverage.jacoco.xmlReportPaths', "${rootProject.buildDir}/reports/jacoco/test/jacocoTestReport.xml"
   }
+}
+
+checkstyle {
+    toolVersion = '10.3.3'
+    configFile = file("${rootDir}/config/checkstyle/checkstyle.xml")
+}
+
+checkstyleMain {
+    source = 'src/main/java'
+}
+
+checkstyleTest {
+    source = 'src/test/java'
+}
+
+jacoco {
+    toolVersion = '0.8.8'
+}
+
+jacocoTestReport {
+    dependsOn test
+    afterEvaluate {
+        classDirectories.setFrom(files(classDirectories.files.collect {
+            fileTree(dir: it,
+                exclude: [
+                    'com/common/**',
+                    'com/domain/dto/**',
+                    'com/domain/entity/**',
+                    'com/domain/repository/'
+                ])
+        }))
+    }
+    reports {
+        xml.enabled true
+        xml.destination file("$buildDir/jacoco/jacoco.xml")
+        csv.enabled false
+        html.enabled true
+        html.destination file("$buildDir/reports/jacoco")
+    }
+}
+
+jacocoTestCoverageVerification {
+    violationRules {
+        rule {
+            enabled = true
+            limit {
+                counter = 'BRANCH'
+                minimum = 0.30
+            }
+            excludes = [
+                'com/domain/dto/*',
+            ]
+        }
+
+        rule {
+            enabled = true
+            limit {
+                counter = 'METHOD'
+                minimum = 0.30
+            }
+            excludes = [
+                'com/domain/dto/*',
+            ]
+        }
+    }
+}
+
+
+
+spotless {
+    java {
+        target fileTree('.') {
+            include '**/*.java'
+            exclude '**/build/**', '**/build-*/**'
+        }
+        googleJavaFormat('1.15.0')
+        toggleOffOn()
+        palantirJavaFormat()
+        indentWithSpaces()
+        removeUnusedImports()
+        trimTrailingWhitespace()
+        endWithNewline()
+        replaceRegex 'Remove empty lines before end of block', '\\n[\\n]+(\\s*})(?=\\n)', '\n$1'
+        replaceRegex 'Remove trailing empty comment lines.', '\n\\s*\\*(\n\\s*\\*/\n)', '$1'
+    }
+}
+
+tasks.withType(Checkstyle) {
+    reports {
+        xml.enabled false
+        html.enabled true
+    }
+}
+
+test.finalizedBy jacocoTestReport
+jacocoTestCoverageVerification.dependsOn jacocoTestReport
+check.dependsOn jacocoTestCoverageVerification
+
+tasks.named('test') {
+    useJUnitPlatform()
 }
